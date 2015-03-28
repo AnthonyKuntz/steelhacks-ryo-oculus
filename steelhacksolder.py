@@ -6,7 +6,6 @@ import time
 import math
 
 from oculus import OculusListener
-from oculus import oculusGo
 
 from Tkinter import *
 
@@ -15,9 +14,7 @@ myo.init()
 class Listener(myo.DeviceListener):
     # return False from any method to stop the Hub
 
-    def __init__(self, canvas, hmd, hmdDesc, width, height): 
-        self.width = width
-        self.height = height
+    def __init__(self, canvas): 
         self.position = (150,150) # Hardcoded starting position
         self.canvas = canvas
         self.horizontal = True # Alternates between drawing directions
@@ -32,23 +29,8 @@ class Listener(myo.DeviceListener):
         self.r = 10 # Radius of line we draw
         self.lastTimeStep = 0
         self.previousOrientation = [0,0,0]
-        self.mainMenuTime = True
-        self.bg = PhotoImage(file = "background.gif")
-        #self.canvas.create_image(0,0,anchor=NW,image = self.bg)
-        self.double = PhotoImage(file = "double.gif")
-
-        self.hmd = hmd
-        self.hmdDesc = hmdDesc
-        self.timerDelay = 16
-        self.flashCount = 0
-        self.v = 50
-        self.dv = 7
-        self.accelerate = True
-        self.nwCorner = False
-
 
     def colorChange(self):
-        if self.mainMenuTime: return
         # Cycles one step through the list of colors
         if self.color == "black":
             self.color = "red"
@@ -57,7 +39,6 @@ class Listener(myo.DeviceListener):
             # Pretty simple, just makes the color be the next one in the list of colors
         
     def on_orientation_data(self, myo, timestamp, orientation):
-        if self.mainMenuTime: return
         return
 
         for index in xrange(len(orientation)-1):
@@ -78,7 +59,6 @@ class Listener(myo.DeviceListener):
         print myo
 
     def on_gyroscope_data(self, myo, timestamp, gyroscope):
-        if self.mainMenuTime: return
         if timestamp - self.lastTimeStep > 1000000: # Checks for 1 million micro seconds
             self.lastTimeStep = timestamp
             self.colorChange()
@@ -87,45 +67,36 @@ class Listener(myo.DeviceListener):
 
         if self.horizontal:
             if gyroscope[0] > 10:
-                try:
-                    # Positive Rotation
-                    self.position = (self.position[0] + 3, self.position[1])
-                    # Add to X value
-                    self.otherPosition = (self.position[0] + self.r, self.position[1]+self.r)
-                    # Determines width of line based on self.r variable
-                    self.listOfPixels.append(self.canvas.create_oval(self.position, self.otherPosition, fill = self.color, outline = self.color))
-                    # Adds a pixel to our existing list of pixels!
-                    self.listOfPositions.append((self.position[0], self.position[1], self.r))
-                    # Adds the corresponding location
-                except: print "oh no"
+                # Positive Rotation
+                self.position = (self.position[0] + 3, self.position[1])
+                # Add to X value
+                self.otherPosition = (self.position[0] + self.r, self.position[1]+self.r)
+                # Determines width of line based on self.r variable
+                self.listOfPixels.append(self.canvas.create_oval(self.position, self.otherPosition, fill = self.color, outline = self.color))
+                # Adds a pixel to our existing list of pixels!
+                self.listOfPositions.append((self.position[0], self.position[1], self.r))
+                # Adds the corresponding location
 
-            elif gyroscope[0] < -10:
-                try: # See above comments
-                    self.position = (self.position[0] , self.position[1]+3)
-                    self.otherPosition = (self.position[0] + self.r, self.position[1]+self.r)
-                    self.listOfPixels.append(self.canvas.create_oval(self.position, self.otherPosition, fill = self.color, outline = self.color))
-                    self.listOfPositions.append((self.position[0], self.position[1], self.r))
-                except: print "oh no"
+            elif gyroscope[0] < -10: # See above comments
+                self.position = (self.position[0] , self.position[1]+3)
+                self.otherPosition = (self.position[0] + self.r, self.position[1]+self.r)
+                self.listOfPixels.append(self.canvas.create_oval(self.position, self.otherPosition, fill = self.color, outline = self.color))
+                self.listOfPositions.append((self.position[0], self.position[1], self.r))
         else:
-            if gyroscope[0] > 10:
-                try: # See above comments
-                    self.position = (self.position[0], self.position[1]-3)
-                    self.otherPosition = (self.position[0] + self.r, self.position[1]+self.r)
-                    self.listOfPixels.append(self.canvas.create_oval(self.position, self.otherPosition, fill = self.color, outline = self.color))
-                    self.listOfPositions.append((self.position[0], self.position[1], self.r))
-                except: print "oh no"
+            if gyroscope[0] > 10: # See above comments
+                self.position = (self.position[0], self.position[1]-3)
+                self.otherPosition = (self.position[0] + self.r, self.position[1]+self.r)
+                self.listOfPixels.append(self.canvas.create_oval(self.position, self.otherPosition, fill = self.color, outline = self.color))
+                self.listOfPositions.append((self.position[0], self.position[1], self.r))
 
-            elif gyroscope[0] < -10:
-                try: # See above comments
-                    self.position = (self.position[0]-3, self.position[1])
-                    self.otherPosition = (self.position[0] + self.r, self.position[1]+self.r)
-                    self.listOfPixels.append(self.canvas.create_oval(self.position, self.otherPosition, fill = self.color, outline = self.color))
-                    self.listOfPositions.append((self.position[0], self.position[1], self.r))
-                except: print "oh no"
+            elif gyroscope[0] < -10: # See above comments
+                self.position = (self.position[0]-3, self.position[1])
+                self.otherPosition = (self.position[0] + self.r, self.position[1]+self.r)
+                self.listOfPixels.append(self.canvas.create_oval(self.position, self.otherPosition, fill = self.color, outline = self.color))
+                self.listOfPositions.append((self.position[0], self.position[1], self.r))
 
 
     def on_accelerometor_data(self, myo, timestamp, acceleration): 
-        if self.mainMenuTime or not self.accelerate: return
         #show_output('acceleration', acceleration)
         # The above prints accelerometor data
         newValue = []
@@ -133,8 +104,7 @@ class Listener(myo.DeviceListener):
            newValue.append(acceleration[index] - self.lastAcceleration[index])
         if abs(newValue[0]) > .1:
             self.r -= 10*int(round(newValue[0]/abs(newValue[0])))
-            if self.r < 3: self.r = 3
-        self.lastAcceleration = acceleration
+        self.lastAcceleration =acceleration
         # If acceleration[2] is ever significant, the above conditional happens.
         # Currently, it does nothing
 
@@ -167,20 +137,19 @@ class Listener(myo.DeviceListener):
         ##############
 
     def on_pose(self, myo, timestamp, pose):
-        if self.mainMenuTime and pose == pose_t.double_tap:
-            self.mainMenuTime = False
-            self.canvas.delete(ALL)
         print pose
         if pose == pose_t.wave_out:
+            myo.vibrate('short')
             #self.considerMyo = not self.considerMyo
             # The above makes the line stop drawing or resume drawing
-            self.accelerate = not self.accelerate
+            self.colorChange()
         elif pose == pose_t.double_tap:
+            print "hi"
             for index in xrange(len(self.listOfPixels)):
                 self.canvas.coords(self.listOfPixels[index], self.listOfPositions[index][0] + 20, 
                                                              self.listOfPositions[index][1],
-                                                            self.listOfPositions[index][0] + self.listOfPositions[index][2] + 20, 
-                                                            self.listOfPositions[index][1] + self.listOfPositions[index][2])
+                                                            self.listOfPositions[index][0] + self.listOfPositions[index][-1] + 20, 
+                                                            self.listOfPositions[index][1] + self.listOfPositions[index][-1])
                 self.listOfPositions[index] = (self.listOfPositions[index][0] + 20, self.listOfPositions[index][1], self.listOfPositions[index][-1])
                 # The above moves everything over
             #self.position = (self.position[0] + 20, self.position[1])
@@ -189,38 +158,12 @@ class Listener(myo.DeviceListener):
         elif pose == pose_t.rest: pass
         elif pose == pose_t.fingers_spread: self.horizontal = not self.horizontal
         elif pose == pose_t.fist:
-            self.colorChange()
+            print "fist"
+            myo.vibrate('short')
             
             # Changes which direction you draw in
 
-    def onTimerFired(self):
-        #self.flashCount += 1
-        if self.mainMenuTime:
-            self.v += self.dv
-            if self.v < 50 or self.v > 190:
-                self.dv *= -1
-            self.canvas.create_rectangle(0,0,self.width,self.height,fill="mint cream")
-            self.canvas.create_text(self.width/2, self.height/2, 
-                text = "double tap to continue...", font = "CordiaNew 20", fill = rgbString(self.v, self.v, self.v))
-            self.canvas.create_image(self.width/2, self.height*3/4.0, image = self.double)
-        try: oculusGo(self.hmd, self.hmdDesc)
-        except: pass
 
-    def onTimerFiredWrapper(self):
-        self.onTimerFired()
-        self.canvas.after(self.timerDelay, self.onTimerFiredWrapper)
-
-    def onMousePressed(self, event):
-        self.nwCorner = (event.x, event.y)
-
-    def onKeyPressed(self, event):
-        if self.nwCorner:
-            if event.char.isalpha() or event.char in "?.,!:;/\\'@#$%^&*() ":
-                self.canvas.create_text(self.nwCorner, text = event.char)
-                self.nwCorner = (self.nwCorner[0] + 5, self.nwCorner[1])
-
-def rgbString(red, green, blue):
-    return "#%02x%02x%02x" % (red, green, blue)
 
 def show_output(message, data):
     print_(message + ':' + str(data))
@@ -230,7 +173,6 @@ def show_output(message, data):
 def main():
     width = 1500
     height = 800
-    timerDelay = 500
     root = Tk()
     root.resizable(True, True) # Change later?
     backgroundColor ="white" # For now
@@ -240,27 +182,21 @@ def main():
 
     hub = myo.Hub()
     hub.set_locking_policy(myo.locking_policy.none)
-    try:
-        hmd, hmdDesc = OculusListener()
-    except: pass
-    try:
-        listener = Listener(canvas, hmd, hmdDesc, width, height)
-    except: listener = Listener(canvas, None, None, width, height)
-    hub.run(1000, listener) # Listener for the Myo
 
+    hub.run(1000, Listener(canvas)) # Listener for the Myo
 
-    listener.onTimerFiredWrapper()
+    #OculusListener()
 
-    def f(event): listener.onKeyPressed(event)
+    # Set up our Oculus listener(canvas)
+
+    def f(event): onKeyPressed(event)
     root.bind("<Key>", f)
-
-    def f(event): listener.onMousePressed(event)
-    root.bind("<Button-1>", f)
 
     root.mainloop() # Halts program
 
 def onKeyPressed(event):
     print "hi"
 
+
 if __name__ == '__main__':
-  main()
+   main()
