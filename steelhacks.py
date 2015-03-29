@@ -1,3 +1,13 @@
+# Etch and Sketch
+#
+# By:
+# Anthony Kuntz
+# Derrike Miller
+# Roisin O'Dowd
+#
+# Uses juharris myo-python to interact with Myo and Oculus Rift
+
+
 import myo
 from myo.lowlevel import pose_t, stream_emg
 from myo.six import print_
@@ -18,7 +28,7 @@ class Listener(myo.DeviceListener):
     def __init__(self, canvas, hmd, hmdDesc, width, height): 
         self.width = width
         self.height = height
-        self.position = (150,150) # Hardcoded starting position
+        self.position = (self.width/4, self.height/4) # Hardcoded starting position
         self.canvas = canvas
         self.horizontal = True # Alternates between drawing directions
         self.considerMyo = True # Turns of drawing 
@@ -36,37 +46,61 @@ class Listener(myo.DeviceListener):
         self.bg = PhotoImage(file = "background.gif")
         #self.canvas.create_image(0,0,anchor=NW,image = self.bg)
         self.double = PhotoImage(file = "double.gif")
+        self.logo = PhotoImage(file = "logo.gif")
 
         self.hmd = hmd
         self.hmdDesc = hmdDesc
-        self.timerDelay = 16
+        self.timerDelay = 50
         self.flashCount = 0
         self.v = 50
         self.dv = 7
         self.accelerate = True
         self.nwCorner = False
+        self.rainbowTime = False
+        self.rainbowColor = "red"
+        self.count = 0
+        self.lastYaw = 0
+        self.squarePos = 52
+
+    def rainbowColorChange(self):
+        if self.colors.index(self.color) == (len(self.colors) - 1):
+            self.color = self.colors[0]
+        else:
+            self.color = self.colors[self.colors.index(self.color) + 1]
+        #self.color = self.colors[self.colors.index(self.color) + 1] if self.rainbowColor != "purple" else "red"
+        self.rainbowColor = self.color
+        
 
 
     def colorChange(self):
         if self.mainMenuTime: return
         # Cycles one step through the list of colors
-        if self.color == "black":
+        if self.rainbowTime:
+            self.rainbowTime = False
+            self.color = "black"
+        elif self.color == "black":
             self.color = "red"
+        elif self.color == "purple":
+            self.rainbowTime = True
         else:
             self.color = self.colors[self.colors.index(self.color)+1]
+        self.squarePos = (self.squarePos + 27) % (53 + 27*8 + 1)
+        if self.squarePos < 52:
+            self.squarePos = 52
+        self.canvas.coords(self.squareLoc[0], self.width - 200, self.squarePos)
             # Pretty simple, just makes the color be the next one in the list of colors
         
-    def on_orientation_data(self, myo, timestamp, orientation):
-        if self.mainMenuTime: return
-        return
+    # def on_orientation_data(self, myo, timestamp, orientation):
+    #     if self.mainMenuTime: return
+    #     return
 
-        for index in xrange(len(orientation)-1):
-            if orientation[index] - self.previousOrientation[index] > .01:
-                print index
+    #     for index in xrange(len(orientation)-1):
+    #         if orientation[index] - self.previousOrientation[index] > .01:
+    #             print index
 
-        self.previousOrientation = orientation
+    #     self.previousOrientation = orientation
 
-
+    # From juharris myo-python
     def on_connect(self, myo, timestamp):
         print_("Connected to Myo")
         myo.vibrate('short') # This can be short, medium, or long
@@ -79,9 +113,10 @@ class Listener(myo.DeviceListener):
 
     def on_gyroscope_data(self, myo, timestamp, gyroscope):
         if self.mainMenuTime: return
-        if timestamp - self.lastTimeStep > 1000000: # Checks for 1 million micro seconds
-            self.lastTimeStep = timestamp
-            self.colorChange()
+        if self.rainbowTime:
+            if timestamp - self.lastTimeStep > 1000000: # Checks for 1 million micro seconds
+                self.lastTimeStep = timestamp
+                self.rainbowColorChange()
             # Uncommenting the above makes the color change every second
         if not self.considerMyo: return # Don't draw if you shouldn't draw
 
@@ -89,7 +124,7 @@ class Listener(myo.DeviceListener):
             if gyroscope[0] > 10:
                 try:
                     # Positive Rotation
-                    self.position = (self.position[0] + 3, self.position[1])
+                    self.position = (self.position[0] + 3, self.position[1]) if self.position[0] + 3 <= self.width else self.position
                     # Add to X value
                     self.otherPosition = (self.position[0] + self.r, self.position[1]+self.r)
                     # Determines width of line based on self.r variable
@@ -97,31 +132,31 @@ class Listener(myo.DeviceListener):
                     # Adds a pixel to our existing list of pixels!
                     self.listOfPositions.append((self.position[0], self.position[1], self.r))
                     # Adds the corresponding location
-                except: print "oh no"
+                except: pass
 
             elif gyroscope[0] < -10:
                 try: # See above comments
-                    self.position = (self.position[0] , self.position[1]+3)
+                    self.position = (self.position[0] , self.position[1]+3) if self.position[1] + 3 <= self.height else self.position
                     self.otherPosition = (self.position[0] + self.r, self.position[1]+self.r)
                     self.listOfPixels.append(self.canvas.create_oval(self.position, self.otherPosition, fill = self.color, outline = self.color))
                     self.listOfPositions.append((self.position[0], self.position[1], self.r))
-                except: print "oh no"
+                except: pass
         else:
             if gyroscope[0] > 10:
                 try: # See above comments
-                    self.position = (self.position[0], self.position[1]-3)
+                    self.position = (self.position[0], self.position[1]-3) if self.position[1] - 3 >= 0 else self.position
                     self.otherPosition = (self.position[0] + self.r, self.position[1]+self.r)
                     self.listOfPixels.append(self.canvas.create_oval(self.position, self.otherPosition, fill = self.color, outline = self.color))
                     self.listOfPositions.append((self.position[0], self.position[1], self.r))
-                except: print "oh no"
+                except: pass
 
             elif gyroscope[0] < -10:
                 try: # See above comments
-                    self.position = (self.position[0]-3, self.position[1])
+                    self.position = (self.position[0]-3, self.position[1]) if self.position[0] - 3 >= 0 else self.position
                     self.otherPosition = (self.position[0] + self.r, self.position[1]+self.r)
                     self.listOfPixels.append(self.canvas.create_oval(self.position, self.otherPosition, fill = self.color, outline = self.color))
                     self.listOfPositions.append((self.position[0], self.position[1], self.r))
-                except: print "oh no"
+                except: pass
 
 
     def on_accelerometor_data(self, myo, timestamp, acceleration): 
@@ -166,41 +201,53 @@ class Listener(myo.DeviceListener):
         # The above is our old attempt at accelerometor --> positon via integration
         ##############
 
+    def translate(self, positive, direction):
+        for index in xrange(len(self.listOfPixels)):
+                try:
+                    self.canvas.coords(self.listOfPixels[index], self.listOfPositions[index][0] + 100*positive*(direction == "x"), 
+                                                                 self.listOfPositions[index][1] + 100*positive*(direction == "y"),
+                                                                self.listOfPositions[index][0] + self.listOfPositions[index][2] + 100*positive*(direction == "x"), 
+                                                                self.listOfPositions[index][1] + self.listOfPositions[index][2] + 100*positive*(direction == "y"))
+                    self.listOfPositions[index] = (self.listOfPositions[index][0] + 100*positive*(direction=="x"), 
+                        self.listOfPositions[index][1]+100*positive*(direction=="y"), self.listOfPositions[index][-1])
+                # The above moves everything over
+                except: continue
+
     def on_pose(self, myo, timestamp, pose):
         if self.mainMenuTime and pose == pose_t.double_tap:
             self.mainMenuTime = False
             self.canvas.delete(ALL)
-        print pose
-        if pose == pose_t.wave_out:
-            #self.considerMyo = not self.considerMyo
+            self.sidemenu = PhotoImage(file = "sidemenu.gif")
+            self.canvas.create_image(self.width-200,0,anchor=NW,image = self.sidemenu)
+            self.square = PhotoImage(file = "square.gif")
+            self.squareLoc = []
+            self.squareLoc.append(self.canvas.create_image(self.width-200, self.squarePos, image = self.square, anchor=NW))
+
+        elif pose == pose_t.wave_in:
+            self.canvas.delete(ALL)
+            self.sidemenu = PhotoImage(file = "sidemenu.gif")
+            self.canvas.create_image(self.width-200,0,anchor=NW,image = self.sidemenu)
+            self.square = PhotoImage(file = "square.gif")
+            self.squareLoc = []
+            self.squareLoc.append(self.canvas.create_image(self.width-200, self.squarePos, image = self.square, anchor=NW))
+
+            #self.position = (self.width/4, self.height/4)
             # The above makes the line stop drawing or resume drawing
-            self.accelerate = not self.accelerate
-        elif pose == pose_t.double_tap:
-            print self.listOfPositions
-
-            for index in xrange(len(self.listOfPixels)):
-                try:
-                    self.canvas.coords(self.listOfPixels[index], self.listOfPositions[index][0] + 100, 
-                                                                 self.listOfPositions[index][1],
-                                                                self.listOfPositions[index][0] + self.listOfPositions[index][2] + 100, 
-                                                                self.listOfPositions[index][1] + self.listOfPositions[index][2])
-                    self.listOfPositions[index] = (self.listOfPositions[index][0] + 100, self.listOfPositions[index][1], self.listOfPositions[index][-1])
-                # The above moves everything over
-                except: continue
-
+            
+        
             #self.position = (self.position[0] + 20, self.position[1])
             # Ignore the above
-        elif pose == pose_t.wave_in: pass
+        elif pose == pose_t.fingers_spread: pass
         elif pose == pose_t.rest: pass
-        elif pose == pose_t.fingers_spread: self.horizontal = not self.horizontal
-        elif pose == pose_t.fist:
+        elif pose == pose_t.fist: self.horizontal = not self.horizontal
+        elif pose == pose_t.double_tap:
             self.colorChange()
             
             # Changes which direction you draw in
 
     def onTimerFired(self):
-        #self.flashCount += 1
         if self.mainMenuTime:
+            self.canvas.delete(ALL)
             self.v += self.dv
             if self.v < 50 or self.v > 190:
                 self.dv *= -1
@@ -208,8 +255,20 @@ class Listener(myo.DeviceListener):
             self.canvas.create_text(self.width/2, self.height/2, 
                 text = "double tap to continue...", font = "CordiaNew 20", fill = rgbString(self.v, self.v, self.v))
             self.canvas.create_image(self.width/2, self.height*3/4.0, image = self.double)
-        try: oculusGo(self.hmd, self.hmdDesc)
-        except: pass
+            self.canvas.create_image(self.width/2, self.height/4, image = self.logo)
+            
+
+        # try: 
+        #     yaw = oculusGo(self.hmd, self.hmdDesc)
+        #     if abs(yaw - self.lastYaw) > .01:
+        #         self.lastYaw = yaw
+        #         4554
+        #     if yaw - self.lastYaw == yaw == self.lastYaw == 0.0:
+        #         #print "The Oculus is Broken :("
+        #         #print ""
+        #         pass
+
+        # except: pass
 
     def onTimerFiredWrapper(self):
         self.onTimerFired()
@@ -222,18 +281,33 @@ class Listener(myo.DeviceListener):
         if self.nwCorner:
             if event.char.isalpha() or event.char in "?.,!:;/\\'@#$%^&*() ":
                 self.canvas.create_text(self.nwCorner, text = event.char)
-                self.nwCorner = (self.nwCorner[0] + 5, self.nwCorner[1])
+                self.nwCorner = (self.nwCorner[0] + 8, self.nwCorner[1])
+        if event.keysym == "BackSpace":
+            self.accelerate = not self.accelerate
+        elif event.keysym == "Return":
+            self.considerMyo = not self.considerMyo
+        elif event.keysym == "Left":
+            self.translate(-1, "x")
+        elif event.keysym == "Right":
+            self.translate(1, "x")
+        elif event.keysym == "Up":
+            self.translate(-1, "y")
+        elif event.keysym == "Down":
+            self.translate(1, "y")
+
 
 def rgbString(red, green, blue):
     return "#%02x%02x%02x" % (red, green, blue)
 
+# From juharris myo-python
+# Used primarily for debugging
 def show_output(message, data):
     print_(message + ':' + str(data))
     # prints data for a given thing
 
 
 def main():
-    width = 1500
+    width = 1900
     height = 800
     timerDelay = 500
     root = Tk()
@@ -263,9 +337,6 @@ def main():
     root.bind("<Button-1>", f)
 
     root.mainloop() # Halts program
-
-def onKeyPressed(event):
-    print "hi"
 
 if __name__ == '__main__':
   main()
