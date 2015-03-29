@@ -176,13 +176,18 @@ class Listener(myo.DeviceListener):
             # The above makes the line stop drawing or resume drawing
             self.accelerate = not self.accelerate
         elif pose == pose_t.double_tap:
+            print self.listOfPositions
+
             for index in xrange(len(self.listOfPixels)):
-                self.canvas.coords(self.listOfPixels[index], self.listOfPositions[index][0] + 20, 
-                                                             self.listOfPositions[index][1],
-                                                            self.listOfPositions[index][0] + self.listOfPositions[index][2] + 20, 
-                                                            self.listOfPositions[index][1] + self.listOfPositions[index][2])
-                self.listOfPositions[index] = (self.listOfPositions[index][0] + 20, self.listOfPositions[index][1], self.listOfPositions[index][-1])
+                try:
+                    self.canvas.coords(self.listOfPixels[index], self.listOfPositions[index][0] + 100, 
+                                                                 self.listOfPositions[index][1],
+                                                                self.listOfPositions[index][0] + self.listOfPositions[index][2] + 100, 
+                                                                self.listOfPositions[index][1] + self.listOfPositions[index][2])
+                    self.listOfPositions[index] = (self.listOfPositions[index][0] + 100, self.listOfPositions[index][1], self.listOfPositions[index][-1])
                 # The above moves everything over
+                except: continue
+
             #self.position = (self.position[0] + 20, self.position[1])
             # Ignore the above
         elif pose == pose_t.wave_in: pass
